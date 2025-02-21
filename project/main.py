@@ -1,23 +1,21 @@
 import subprocess
 import time
-
-
-imageName = "olama-test"
-containerName = "olama_instance"
+import argparse
 
 def build_image():
     print("Building the Docker image for Olama container...")
-    command = f'docker build -t {imageName} .'
+    command = f'docker build -t {imageName()} .'
     subprocess.run(command, shell=True, check=True)
 
 def start_docker_container():
     print("Starting terminal instance for Olama container...")
-    command = f'start cmd /k docker run --gpus=all -it -p 9000:9000 --name {containerName} {imageName}'
+    command = f'start cmd /k docker run --gpus=all -it -p 9000:9000 --name {containerName()} {imageName()}'
     subprocess.Popen(command, shell=True)
     time.sleep(5)
 
 def run_command():
-    build_image()
+    if build():
+        build_image()
     start_docker_container()
 
 """ def fine_tune_model():
@@ -41,6 +39,29 @@ def stop_docker_container():
     subprocess.run(["docker", "stop", "olamma_instance"], check=True)
     subprocess.run(["docker", "rm", "olamma_instance"], check=True)
     print("Docker container stopped and removed.")
+
+
+
+def commands():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("build", nargs="?", default="default", help="Build the Docker image")
+    parser.add_argument("image_name", nargs="?", default="olama-test", help="Name for the Docker image")
+    parser.add_argument("container_name", nargs="?", default="olama_instance", help="Build the Docker image")
+
+    args = parser.parse_args()
+    return args
+
+
+
+def build():
+    return commands().build == "build"
+
+
+def imageName():
+    return commands().image_name
+
+def containerName():
+    return commands().container_name
 
 def main():
     try:

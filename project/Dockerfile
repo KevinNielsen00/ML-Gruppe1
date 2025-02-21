@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y curl \
     && curl -fsSL https://ollama.com/install.sh | sh
 
 # Copy your local model into the image.
-COPY models/deepseek-coder-7b-instruct-v1.5 /model
+COPY models/DeepSeek-R1-Distill-Qwen-1.5B /model
 
 # Create an entrypoint script that starts the ollama service and then loads your local model.
 RUN echo '#!/bin/sh\n\
