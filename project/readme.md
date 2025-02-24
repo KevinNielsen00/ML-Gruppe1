@@ -22,7 +22,7 @@ Her er en trinvis guide til at starte din lokale instans:
 Todo: 
 Daniel: Fikser nyt docker setup samt kigger på træning 
 Kim: Kigger på at træne med kode data, Kim skriver plan til Mathias. 
-Kevin: Undersøger og arbejder med analyse Kim og kevin er 50/50.
+Kevin: Undersøger og arbejder med analyse Kim og Kevin er 50/50.
 
 Efterfølgende: 
 Kim vil gerne arbejde på frontend
