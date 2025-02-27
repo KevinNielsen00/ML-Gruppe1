@@ -9,7 +9,7 @@ def build_image():
 
 def start_docker_container():
     print("Starting terminal instance for Olama container...")
-    command = f'start cmd /k docker run -it -p 9000:9000 --name {containerName()} {imageName()}'
+    command = f'start cmd /k docker run -it --gpus all -p 9000:9000 --name {containerName()} {imageName()}'
     subprocess.Popen(command, shell=True)
     time.sleep(5)
 

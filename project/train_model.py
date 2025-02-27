@@ -1,124 +1,103 @@
-
-
-
-
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, AutoConfig, AutoModel, TrainingArguments, DataCollatorWithPadding, Trainer
-from datasets import load_dataset, Dataset
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, DataCollatorForLanguageModeling, Trainer, BitsAndBytesConfig
+from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
+from datasets import Dataset
 import torch
 import json
 
+# Define directories
+save_dir = "./finetuned_lora_model"
+model_dir = "models/DeepSeek-R1-Distill-Qwen-1.5B" 
 
+# Load your custom dataset
+def load_custom_dataset(file_path):
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    # Extract the text data
+    texts = [item['answer'] for item in data]
+    
+    # Create a dataset dictionary
+    dataset_dict = {"text": texts}
+    
+    # Convert to Dataset object
+    return Dataset.from_dict(dataset_dict)
 
-save_dir = "./finetuned_model"
-model_dir = "distilgpt2" 
+# Configure 8-bit quantization
+quantization_config = BitsAndBytesConfig(
+    load_in_8bit=True,
+    llm_int8_threshold=6.0,
+    llm_int8_has_fp16_weight=False
+)
 
-def tokenize_dataset(dataset):
-    tokenized = tokenizer(dataset["text"], padding="max_length", truncation=True)
-    return tokenized
-
-
-tokenizer = AutoTokenizer.from_pretrained(model_dir, model_max_length=128)
+tokenizer = AutoTokenizer.from_pretrained(model_dir)
 tokenizer.pad_token = tokenizer.eos_token
 
 model = AutoModelForCausalLM.from_pretrained(
     model_dir,
-    torch_dtype="auto"
-    
+    device_map="auto",
+    quantization_config=quantization_config
 )
 
+model = prepare_model_for_kbit_training(model)
+lora_config = LoraConfig(
+    r=16,
+    lora_alpha=32,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM"
+)
+model = get_peft_model(model, lora_config)
 
+def tokenize_dataset(dataset):
+    return tokenizer(
+        dataset["text"],
+        padding="max_length", 
+        truncation=True,
+        max_length=128,
+        return_special_tokens_mask=True
+    )
 
+dataset = load_custom_dataset("datacenter/data/dataset.json")
+tokenized_dataset = dataset.map(tokenize_dataset, batched=True, remove_columns=["text"])
 
-# Indlæs data fra JSON-filen
-with open("datacenter/dataset.json", "r", encoding="utf-8") as file:
-    data = json.load(file)
+data_collator = DataCollatorForLanguageModeling(
+    tokenizer=tokenizer,
+    mlm=False
+)
 
-questions = [entry["question"] for entry in data]
-answers = [entry["answer"] for entry in data]
-
-split_ratio = 0.8
-split_index = int(len(questions) * split_ratio)
-
-train_questions = questions[:split_index]
-train_answers = answers[:split_index]
-
-eval_questions = questions[split_index:]
-eval_answers = answers[split_index:]
-
-train_encodings = tokenizer(train_questions, truncation=True, padding="max_length")
-train_labels = tokenizer(train_answers, truncation=True, padding="max_length")
-
-eval_encodings = tokenizer(eval_questions, truncation=True, padding="max_length")
-eval_labels = tokenizer(eval_answers, truncation=True, padding="max_length")
-
-
-train_dataset = Dataset.from_dict({
-    "input_ids": train_encodings["input_ids"],
-    "attention_mask": train_encodings["attention_mask"],
-    "labels": train_labels["input_ids"]
-})
-eval_dataset = Dataset.from_dict({
-    "input_ids": eval_encodings["input_ids"],
-    "attention_mask": eval_encodings["attention_mask"],
-    "labels": eval_labels["input_ids"]
-})
-
-from transformers import DataCollatorForLanguageModeling
+tokenized_dataset = tokenized_dataset.train_test_split(test_size=0.1)
 
 training_args = TrainingArguments(
     learning_rate=3e-5,
     output_dir=save_dir,
-    num_train_epochs=20,
-    per_device_train_batch_size=8,
-    gradient_accumulation_steps=4,
-    save_total_limit=3,
-    warmup_steps=1000,
-    weight_decay=0.01,
+    learning_rate=2e-4,
+    per_device_train_batch_size=1,
+    per_device_eval_batch_size=1,
+    gradient_accumulation_steps=16,  
+    num_train_epochs=3,
+    save_strategy="epoch",
     evaluation_strategy="epoch",
-)
-
-# Brug en data collator til at forbedre træningen
-data_collator = DataCollatorForLanguageModeling(
-    tokenizer=tokenizer,
-    mlm=False  # False fordi det er en causal language model (GPT-type)
+    logging_dir="./logs",
+    logging_steps=10,
+    weight_decay=0.01,
+    warmup_steps=50,
+    fp16=True,
+    optim="adamw_torch",
+    max_grad_norm=0.3,
+    report_to=["none"]
 )
 
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=eval_dataset,  # Tilføj evalueringsdata
-    data_collator=data_collator
+    train_dataset=tokenized_dataset["train"],
+    eval_dataset=tokenized_dataset["test"],
+    data_collator=data_collator,
 )
 
-
-
-torch.cuda.empty_cache()
-torch.cuda.reset_peak_memory_stats()
-
 trainer.train()
-trainer.save_model(f"{save_dir}/model")
 
-
-
-
-
-
-
-# train_texts = [
-#     "Flopper is a dog.",
-#     "Flopper loves to play in the park.",
-#     "My friend has a dog named Flopper.",
-#     "Flopper barks when he sees a cat.",
-#     "Flopper is a very friendly dog."
-# ]
-
-# train_labels = [
-#     "Flopper is a dog.",
-#     "Flopper loves to play in the park.",
-#     "My friend has a dog named Flopper.",
-#     "Flopper barks when he sees a cat.",
-#     "Flopper is a very friendly dog."
-# ]
-
-
+model.save_pretrained(save_dir)
+tokenizer.save_pretrained(save_dir)
+print(f"LoRA adapter saved to {save_dir}")

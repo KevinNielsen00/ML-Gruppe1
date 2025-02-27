@@ -3,3 +3,7 @@ project/datacenter/data/smcleod-golang-coder-openai-chat-format-pruned.jsonl
 project/datacenter/data/smcleod-golang-coder-openai-chat-format.jsonl
 project/datacenter/data/smcleod-golang-coder.csv
 project/datacenter/data/smcleod-golang-coder.parquet
+/project/finetuned_lora_model
+/project/finetuned_lora_model/checkpoint-224
+/project/finetuned_lora_model/checkpoint-112
+/project/finetuned_lora_model/checkpoint-333
