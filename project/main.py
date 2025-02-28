@@ -18,29 +18,11 @@ def run_command():
         build_image()
     start_docker_container()
 
-""" def fine_tune_model():
-    print("Starting fine tuning of the model...")
-    # Insert your model fine-tuning code here.
-    # For example:
-    #   - Load your dataset
-    #   - Instantiate your model (or load a pretrained version)
-    #   - Configure hyperparameters
-    #   - Train the model
-    #   - Save the updated model
-    #
-    # This is just a placeholder:
-    for epoch in range(1, 6):
-        print(f"Epoch {epoch}/5: training...")
-        time.sleep(1)
-    print("Model fine tuning completed successfully.") """
-    
 def stop_docker_container():
     print("Stopping Docker container...")
     subprocess.run(["docker", "stop", "olamma_instance"], check=True)
     subprocess.run(["docker", "rm", "olamma_instance"], check=True)
     print("Docker container stopped and removed.")
-
-
 
 def commands():
     parser = argparse.ArgumentParser()

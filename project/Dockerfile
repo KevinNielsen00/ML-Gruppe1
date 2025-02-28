@@ -2,12 +2,6 @@ FROM python:3.8-slim
 
 WORKDIR /app
 
-# Install system dependencies needed for scipy and other packages
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copy the required files
 COPY start_up.py ./start_script.py
 COPY requirements.txt ./requirements.txt    

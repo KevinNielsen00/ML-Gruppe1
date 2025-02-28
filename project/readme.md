@@ -20,9 +20,9 @@ Her er en trinvis guide til at starte din lokale instans:
    python main.py build 
 
 Todo: 
-Daniel: Fikser nyt docker setup samt kigger på træning 
-Kim: Kigger på at træne med kode data, Kim skriver plan til Mathias. 
-Kevin: Undersøger og arbejder med analyse Kim og Kevin er 50/50.
+Daniel: brug fine tune
+Kim: brug fine tune
+Kevin:Fuld flæk det mathias snakkede om 
 
 Efterfølgende: 
 Kim vil gerne arbejde på frontend
